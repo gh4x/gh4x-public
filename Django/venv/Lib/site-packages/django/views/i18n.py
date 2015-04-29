@@ -1,17 +1,21 @@
+import gettext as gettext_module
+import importlib
 import json
 import os
-import gettext as gettext_module
 
 from django import http
+from django.apps import apps
 from django.conf import settings
-from django.template import Context, Template
-from django.utils import importlib
-from django.utils.translation import check_for_language, to_locale, get_language
-from django.utils.encoding import smart_text
-from django.utils.formats import get_format_modules, get_format
-from django.utils._os import upath
-from django.utils.http import is_safe_url
+from django.template import Context, Engine
 from django.utils import six
+from django.utils._os import upath
+from django.utils.encoding import smart_text
+from django.utils.formats import get_format, get_format_modules
+from django.utils.http import is_safe_url
+from django.utils.translation import (
+    LANGUAGE_SESSION_KEY, check_for_language, get_language, to_locale,
+)
+
 
 def set_language(request):
     """
@@ -24,7 +28,7 @@ def set_language(request):
     redirect to the page in the request (the 'next' parameter) without changing
     any state.
     """
-    next = request.REQUEST.get('next')
+    next = request.POST.get('next', request.GET.get('next'))
     if not is_safe_url(url=next, host=request.get_host()):
         next = request.META.get('HTTP_REFERER')
         if not is_safe_url(url=next, host=request.get_host()):
@@ -34,9 +38,12 @@ def set_language(request):
         lang_code = request.POST.get('language', None)
         if lang_code and check_for_language(lang_code):
             if hasattr(request, 'session'):
-                request.session['django_language'] = lang_code
+                request.session[LANGUAGE_SESSION_KEY] = lang_code
             else:
-                response.set_cookie(settings.LANGUAGE_COOKIE_NAME, lang_code)
+                response.set_cookie(settings.LANGUAGE_COOKIE_NAME, lang_code,
+                                    max_age=settings.LANGUAGE_COOKIE_AGE,
+                                    path=settings.LANGUAGE_COOKIE_PATH,
+                                    domain=settings.LANGUAGE_COOKIE_DOMAIN)
     return response
 
 
@@ -171,7 +178,7 @@ js_catalog_template = r"""
 
 
 def render_javascript_catalog(catalog=None, plural=None):
-    template = Template(js_catalog_template)
+    template = Engine().from_string(js_catalog_template)
     indent = lambda s: s.replace('\n', '\n  ')
     context = Context({
         'catalog_str': indent(json.dumps(
@@ -186,7 +193,10 @@ def render_javascript_catalog(catalog=None, plural=None):
 
 def get_javascript_catalog(locale, domain, packages):
     default_locale = to_locale(settings.LANGUAGE_CODE)
-    packages = [p for p in packages if p == 'django.conf' or p in settings.INSTALLED_APPS]
+    app_configs = apps.get_app_configs()
+    allowable_packages = set(app_config.name for app_config in app_configs)
+    allowable_packages.add('django.conf')
+    packages = [p for p in packages if p in allowable_packages]
     t = {}
     paths = []
     en_selected = locale.startswith('en')
@@ -245,7 +255,8 @@ def get_javascript_catalog(locale, domain, packages):
                 plural = l.split(':', 1)[1].strip()
     if plural is not None:
         # this should actually be a compiled function of a typical plural-form:
-        # Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;
+        # Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 :
+        #               n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;
         plural = [el.strip() for el in plural.split(';') if el.strip().startswith('plural=')][0].split('=', 1)[1]
 
     pdict = {}
