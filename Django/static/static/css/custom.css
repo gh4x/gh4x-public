@@ -3,7 +3,8 @@
 }
 
 .success {
-    background-color: #c0c0c0;
+    background-color: #fc9803;
+    text-align: center;
 }
 
 .messages-row {
