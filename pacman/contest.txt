@@ -1,0 +1,3 @@
+My contest agent is simple, he looks at a depth of 5in an expectimax using the better eval function.
+Basically, he likes eating power pellets and then eating ghosts if they havent been eaten yet and they are scared.
+He will attempt to repeat this process (while snagging some food on the way and avoiding live not scared ghosts) as often as possible before he dies. (gets a high score but doesnt leave victorious.
