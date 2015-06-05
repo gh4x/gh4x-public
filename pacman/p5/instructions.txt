@@ -1,0 +1,1 @@
+To run my python, simply run the command python project5.py
