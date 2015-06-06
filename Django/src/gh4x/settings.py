@@ -84,7 +84,7 @@ STATIC_URL = '/static/'
 
 TEMPLATE_DIRS = (
     os.path.join(os.path.dirname(BASE_DIR), "static", "templates"),
-    #C:\Users\gh4x\Django\static\
+    #C:\Users\gh4x\Django\src\static\templates\
 )
 
 if DEBUG:
